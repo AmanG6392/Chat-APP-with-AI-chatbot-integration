@@ -45,7 +45,7 @@ const getAllProject = async (req, res) =>{
     
    const loggedInUser = await User.findOne({email: req.user.email})
    
-   const allUserProjects  = await getAllProjectByUserID({userId: loggedInUser._id})
+   const allUserProjects  = await getAllProjectByUserID( { userId: loggedInUser._id } )
 
    return res.status(200).json({
     projects: allUserProjects
@@ -100,10 +100,8 @@ const addUserToProject = async(req,res) => {
 
 const getProjectById = async(req,res) => {
 
-  const { projectId}  = req.body;
-
+  const { projectId}  = req.params;
   
-
   try {
     
     

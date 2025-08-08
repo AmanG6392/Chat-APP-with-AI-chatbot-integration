@@ -53,7 +53,7 @@ const addUsersToProject = async({projectId, users, userId})=>{
 
    if( !projectId){
 
-      throw new Error(" projectId is required")
+      throw new Error(" projectId is required **")
 
    }
 
@@ -116,9 +116,7 @@ const getProjectUsingId = async ({projectId}) =>{
        _id: projectId,
      
 
-   }).populate('users')
-
-    
+   }).populate('users');
 
    return project
 

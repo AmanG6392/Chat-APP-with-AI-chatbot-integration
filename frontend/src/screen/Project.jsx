@@ -4,10 +4,12 @@ import axios from '../config/axios.js'
 
 const Project = () => {
 
-  const Location = useLocation()
+  const location = useLocation()
+
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedUserId, setSelectedUserId] = useState(new Set())
+  const [ project, setProject ] = useState(location.state.project)
 
 
   const [users, setUsers] = useState([])
@@ -17,23 +19,69 @@ const Project = () => {
     setSelectedUserId(prev => {
     const updated = new Set(prev);
     if (updated.has(_id)) {
+
       updated.delete(_id);
+
     } else {
+
       updated.add(_id);
+
     }
-    console.log();
-    
     return updated;
+
     });
 
   };
 
-   
+  function addCollaborator(){
+
+    axios.put("/projects/add-user" ,{
+
+
+      // using to send the required data....
+
+      projectId: location.state.project._id,
+    
+      users: Array.from(selectedUserId)
+
+    }).then(res => {
+
+      console.log(res.data);
+      setIsModalOpen(false)
+      
+    }).catch(err=>{
+      
+      console.log(err.response.data)
+      
+    })
+
+  }
+
+  console.log("projectid : ", location.state.project._id);
+  
   useEffect(()=>{
-   
-   axios.get('users/allUsers')
+
+     if (!project?._id) {
+    console.error("No project ID found");
+    return;
+  }
+
+  axios.get(`/projects/getprojectId/${location.state.project._id}`)
+  .then(res =>  {
+    
+    setProject(res.data.project)
+  } )
+
+  
+
+
+   axios.get('/users/allUsers')
    .then(res=>{ 
+    
+    
     setUsers(res.data.users)
+    
+    
   })
    .catch((err)=>{
 
@@ -42,6 +90,9 @@ const Project = () => {
    })
 
   },[])
+
+
+  
   
 
   return (
@@ -115,9 +166,11 @@ const Project = () => {
           </div>
 
 
-           <div className={`sidePanel w-2/3 h-full flex flex-col gap-2 bg-slate-50 absolute transition-all ${isSidePanelOpen ? 'translate-x-0' : '-translate-x-full'} top-0`}>
+          <div className={`sidePanel w-2/3 h-full flex flex-col gap-2 bg-slate-50 absolute transition-all ${isSidePanelOpen ? 'translate-x-0' : '-translate-x-full'} top-0`}>
            
-              <header className='flex justify-end p-2 px-3 bg-slate-700'>
+              <header className='flex items-center justify-between p-2 px-3 bg-slate-700'>
+
+                <h1 className="semi-bold flex justify-start ">Collaborators</h1>
                
                 <button 
 
@@ -126,22 +179,40 @@ const Project = () => {
                     e.preventDefault()
                    setIsSidePanelOpen(!isSidePanelOpen)}}>
 
-                  <i className='ri-close-fill' style={{ fontSize: '22px', color: 'grey-800',  }}></i>
+                  <i className='ri-close-fill flex justify-end' style={{ fontSize: '22px', color: 'grey-800',  }}></i>
 
                 </button>
               </header>
 
               <div className="users flex flex-col gap-2">
-               
-                <div className="user cursor-pointer hover:bg-slate-300 flex gap-2 items-center text-black ">
-               
-                   <div className="w-13 h-13 rounded-full bg-slate-500 flex items-center  justify-center ">
-                      <i className='ri-user-fill' style={{fontSize:'22px'}}></i>
-                   </div>
 
-                   <h1 className='text-md font-semibold'>username</h1>
+                {project.users && project.users.map((user, index) =>
+               
+                
+                    {
+                      
+                      return (
+                              <div
+                                key={index}
+                                className="user cursor-pointer hover:bg-slate-300 flex gap-2 items-center text-black"
+                               >
 
-                </div>
+                               <div className="w-13 h-13 rounded-full bg-slate-500 flex items-center justify-center">
+                                <i className="ri-user-fill" style={{ fontSize: "22px" }}></i>
+                               </div>
+
+                               <h1 className="text-md font-semibold text-black">
+                                {user.email}
+                               </h1>
+
+                              </div>
+
+                              );
+                    }
+
+                  )
+                }
+
 
               </div>
            
@@ -182,7 +253,6 @@ const Project = () => {
 
                                 </div>
 
-
                               )
                               
 
@@ -192,19 +262,21 @@ const Project = () => {
 
                         </div>
                         
-                        <button className='absolute bottom-4 left-1/2 transform -translate-x-1/2 px-4 py-2 bg-blue-600 text-white rounded-md'>
+                        <button
+                        onClick={addCollaborator}
+                        className='absolute bottom-4 left-1/2 transform -translate-x-1/2 px-4 py-2 bg-blue-600 text-white rounded-md'>
                             Add Collaborators
                         </button>
                         
                     </div>
           </div>
          )
+
         }
-
-
 
     </main>
   )
 }
 
 export default Project
+

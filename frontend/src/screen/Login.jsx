@@ -8,7 +8,9 @@ const Login = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword ] = useState('')
 
-  const {setUser} = useUser()
+  const {setUser, user} = useUser()
+  
+  
   const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
@@ -24,6 +26,8 @@ const Login = () => {
      localStorage.setItem('token', res.data.token)
     
      setUser(res.data.user)
+
+     
      
      navigate('/')
 
@@ -79,7 +83,7 @@ const Login = () => {
         </form>
         <p className ="text-gray-400 mt-6 text-center">
           Don't have an account?{' '}
-          <Link to="/register" className="text-blue-400       hover:underline">
+          <Link to="/register" className="text-blue-400 hover:underline">
             Create one
           </Link>
           

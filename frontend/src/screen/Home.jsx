@@ -2,11 +2,13 @@ import React, { useState ,useEffect} from 'react'
 import { useUser } from '../context/User.context.jsx'
 import axios from '../config/axios.js'
 import { useNavigate } from 'react-router-dom'
+import UserAuth from '../auth/UserAuth.jsx'
 
 const Home = () => {
   const { user } = useUser()
   const [ project, setProject] = useState([])
   const [showModal, setShowModal] = useState(false)
+  const [showModal2, setShowModal2] = useState(false)
   const [projectName, setProjectName] = useState(null)
 
   const navigate = useNavigate()
@@ -29,6 +31,23 @@ const Home = () => {
     
   }
 
+  const LogoutHandleSubmit = (e) => {
+      
+    axios.get('/users/logout').then((res)=>{
+
+      setShowModal2(false)
+     
+      console.log(" You are logged out  ")
+
+   
+    }).catch((err) => {
+      console.log(err);
+      
+    })
+    
+    // Handle project name submission logic here
+    
+  }
 
   useEffect( () => {
     axios.post('/projects/my-projects').then((res)=>{
@@ -55,8 +74,8 @@ const Home = () => {
           
         </button>
 
-          {
-               project.map((project) => (
+        { 
+          project.map((project) => (
                         <div key={project._id}
 
                             onClick={() => {
@@ -76,9 +95,17 @@ const Home = () => {
                             </div>
 
                         </div>
-                    ))      
-                
-            }
+          ))                    
+        }
+
+         <button
+          className="project p-4 h-12 w-40 border rounded-md border-slate-300 flex items-center justify-center gap-4"
+          onClick={() => setShowModal2(true)}
+         >
+          <div className="flex">Log Out</div>
+          <i className="ri-logout-box-line" style={{ fontSize: '25px', color: 'white' }}></i> 
+        
+        </button>
       </div>
 
       {/* Modal */}
@@ -117,6 +144,41 @@ const Home = () => {
           </div>
         </div>
       )}
+
+
+      {/* Modal 2 */}
+      {showModal2 && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm">
+            <h2 className="text-lg mb-4 text-black font-bold">Are you sure you want to logout?</h2>
+            <div className="flex justify-end gap-2 mt-4">
+              <button
+                className="px-4 py-2 bg-gray-400 rounded hover:bg-gray-300"
+                onClick={() => setShowModal2(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                onClick={() => {
+                 
+                  LogoutHandleSubmit()
+
+                  navigate(`/login`)
+                      
+                }}
+              >
+                Yes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+       
+
+
+      
     </main>
   )
 }

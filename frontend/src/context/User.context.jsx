@@ -1,10 +1,11 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
 // Create the UserContext
-const UserContext = createContext();
+export const UserContext = createContext();
 
 // Provider component
 export const UserProvider = ({ children }) => {
+
   const [user, setUser] = useState(null);
 
   return (

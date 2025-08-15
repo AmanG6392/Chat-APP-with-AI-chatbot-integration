@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import connectMongoDB from './db/db.js'; 
 import userRouter from './routes/user.routes.js'
 import projectRouter from './routes/project.routes.js';
+import authRouter from './routes/authUser.routes.js'
 connectMongoDB()
 
 const app = express();
@@ -18,6 +19,8 @@ app.use(cors({
     // credentials: true
 }))
 
+
+app.use('/auth', authRouter);
 app.use('/users', userRouter);
 app.use('/projects', projectRouter);
 

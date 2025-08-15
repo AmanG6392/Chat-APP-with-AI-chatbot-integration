@@ -57,6 +57,7 @@ import redisClient from "../services/redis.service.js";
          
 
         delete user._doc.password;
+        
           res.status(200).json({  
             user, 
             token,

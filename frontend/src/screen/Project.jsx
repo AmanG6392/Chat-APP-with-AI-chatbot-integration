@@ -1,6 +1,8 @@
-import React,{useState, useEffect} from 'react'
+import React,{useState, useEffect, useContext} from 'react'
 import { useLocation } from 'react-router-dom'
 import axios from '../config/axios.js'
+import {initializeSocket, receiveMessage, sendMessage } from '../config/socket'
+import { UserProvider, useUser } from '../context/User.context.jsx'
 
 const Project = () => {
 
@@ -10,8 +12,12 @@ const Project = () => {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedUserId, setSelectedUserId] = useState(new Set())
   const [ project, setProject ] = useState(location.state.project)
+  const [message, setmessage ] = useState('');
 
+  const {user} =  useUser()
 
+  const messageBox = React.createRef()
+  
   const [users, setUsers] = useState([])
 
   const handleUserClick = (_id) => {
@@ -57,26 +63,32 @@ const Project = () => {
 
   }
 
-  console.log("projectid : ", location.state.project._id);
   
-  useEffect(()=>{
+  
+  useEffect( ()=> {
+   
+  if(project?._id){
 
-     if (!project?._id) {
-    console.error("No project ID found");
-    return;
+  initializeSocket(project._id)
+  
   }
 
+  receiveMessage('project-message', data => {
+
+    console.log(data);
+    appendIncomingMessage(data)
+    
+  })
+  
   axios.get(`/projects/getprojectId/${location.state.project._id}`)
-  .then(res =>  {
+   .then(res =>  {
     
     setProject(res.data.project)
   } )
 
-  
-
 
    axios.get('/users/allUsers')
-   .then(res=>{ 
+    .then(res=>{ 
     
     
     setUsers(res.data.users)
@@ -91,18 +103,66 @@ const Project = () => {
 
   },[])
 
+  function send(){
 
-  
-  
+    if(message === '') return
+
+    sendMessage('project-message', {
+      message,
+      sender: user
+    })
+
+    appendOutgoingMessage({
+      message,
+      sender: user
+    })
+    setmessage("")
+  }
+
+  function appendIncomingMessage(messageObject){
+
+    const messageBox = document.querySelector('.message-box')
+
+    const message = document.createElement('div')
+    message.classList.add('message','self-start', 'max-w-[70%]', 'flex', 'flex-col', 'p-2', 'bg-slate-100', 'rounded-md')
+    message.innerHTML = `
+    <small class='opacity-65 text-xs text-black'>${messageObject.sender.email}</small>
+    <p class='text-black text-sm'>${messageObject.message}</p>
+    `
+    messageBox.appendChild(message)
+    scrollToBottom()
+
+  }
+
+  function appendOutgoingMessage(messageObject){
+
+    const messageBox = document.querySelector('.message-box')
+
+    const newmessage = document.createElement('div')
+    newmessage.classList.add('self-end', 'max-w-[70%]', 'flex', 'flex-col', 'p-2', 'bg-slate-100', 'rounded-md')
+    newmessage.innerHTML = `
+    <small class='opacity-65 text-xs bold text-black'> You </small>
+    <p class='text-black text-sm'>${messageObject.message}</p>
+    `
+    messageBox.appendChild(newmessage)
+    scrollToBottom()
+
+  }
+
+  function scrollToBottom(){
+
+   messageBox.current.scrollTop = messageBox.current.scrollHeight
+
+  }
 
   return (
 
     <main  className='h-screen w-screen flex'>
 
-        <section className='left  flex flex-col h-full min-w-92 relative  '>
+        <section className='left  flex flex-col h-screen min-w-92 relative  '>
         
           <header
-           className=" flex justify-between items-center  p-4 w-full bg-slate-800">
+           className=" flex justify-between items-center  p-4 w-full bg-slate-800 ">
             
             <button className='flex gap-2'
              onClick={()=> setIsModalOpen(true)}>
@@ -125,41 +185,37 @@ const Project = () => {
 
           </header>
 
-          <div className="conversation-area w-full flex flex-grow flex-col bg-slate-400 gap-2">
+          <div className="conversation-area w-full pt-1 pb-14 flex flex-grow flex-col bg-slate-400 gap-1 overflow-y-auto relative">
             
-            <div className="message-box  p-1 max-w-56 flex flex-col p-2 bg-slate-50 w-fit rounded-md">
-                 <div className="incoming-message text-black">
-                  <small 
-                  className='opacity-65 text-xs'>example@jndjcnjank</small>
-                  <p>lorem ipsumnjnjnej jejnkrj den </p>
-                 </div>
+            <div 
+              
+             ref={messageBox}
+
+              className="message-box p-2 flex flex-col gap-1 flex-grow bg-slate-400 overflow-y-auto">
+                 
 
             </div>
 
-            <div className=" ml-auto message-box p-1 max-w-56 flex flex-col p-2 bg-slate-50 w-fit rounded-md">
-                 <div className="incoming-message text-black">
-                  <small 
-                  className='opacity-65 text-xs'>example@jndjcnjank</small>
-                  <p>lorem ipsumnjnjnej jejnkrj den hajn jnsjanjnwanj jndsjanjjknjndms jnksmnamd xmanjjjn mnirnlkm kwjerwhqhnfnr fa fcarjac;oknfgeret glwekerw3qareafa flsaredaasmrkema kmaasdeeqqerr tttgkm, aswqfkawefmmcaknf cmnka </p>
-                 </div>
-
-            </div>
-
-
-            <div className="fixed bottom-0 left-0 w-80  p-3">
+            <div className= " fixed bottom-0 flex w-93  absolute bottom-0 left-0  p-3">
                
-              <div className="flex w-full">
+              
                    
-                <input type="text"
+                <input 
+                value = {message}
+                onChange = {(e) => setmessage(e.target.value)}
+                type="text"
                  placeholder="Enter message"
                  className="flex-grow bg-white p-2 px-4 rounded-full border-none outline-none text-black"
                 />
                    
-                <button className="ml-1">
-                    <i className="ri-send-plane-fill" style={{ fontSize: '25px', color: 'white' }}></i>
+                <button className="ml-1 " 
+                
+                onClick={send}  >
+           
+                    <i className="ri-send-plane-fill" style={{ fontSize: '30px', color: 'white' }}></i>
                 </button>
 
-              </div>
+              
 
             </div>
 
@@ -215,9 +271,7 @@ const Project = () => {
 
 
               </div>
-           
-           
-           
+          
            </div>
 
         </section>

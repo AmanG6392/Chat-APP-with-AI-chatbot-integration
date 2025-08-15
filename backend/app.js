@@ -6,6 +6,7 @@ import connectMongoDB from './db/db.js';
 import userRouter from './routes/user.routes.js'
 import projectRouter from './routes/project.routes.js';
 import authRouter from './routes/authUser.routes.js'
+import aiRouter from './routes/ai.routes.js'
 connectMongoDB()
 
 const app = express();
@@ -23,6 +24,7 @@ app.use(cors({
 app.use('/auth', authRouter);
 app.use('/users', userRouter);
 app.use('/projects', projectRouter);
+app.use('/ai-res', aiRouter);
 
 
 app.get('/', (req, res) =>{ 

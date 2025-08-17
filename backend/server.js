@@ -5,6 +5,7 @@ import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose';
 import projectModel from './models/project.model.js'
+import generateAIResult from './services/ai.service.js'
 
 
 
@@ -70,13 +71,33 @@ io.on('connection',socket  => {
   socket.roomId = socket.project._id.toString()
   console.log('a user connected');
   
-  
-
   socket.join(socket.roomId);
 
-  socket.on('project-message', data => {
+  socket.on('project-message',  async data => {
+
+    const message = data.message;
+
+    const aiPresentInMessage = message.includes('@ai');
      
+    if(aiPresentInMessage){
+      
+      const prompt = message.replace('@ai', '')
+      const result = await generateAIResult(prompt)
+
+      io.to(socket.roomId).emit('project-message', {
+        message: result,
+        sender: {
+          _id: 'ai',
+          email: 'AI'
+        }
+
+      } )
+
+      return
+    }
+
     socket.broadcast.to(socket.roomId).emit('project-message', data)
+
   })
 
   socket.on('disconnect', () => { 

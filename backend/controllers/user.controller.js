@@ -46,6 +46,7 @@ import redisClient from "../services/redis.service.js";
                 errors: 'Invalid credentials'
             })
         }
+        
         const Ismatchpassword =  await user.isvalidPassword(password);
         if(!Ismatchpassword){
             return res.status(401).json({

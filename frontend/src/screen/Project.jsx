@@ -4,7 +4,7 @@ import axios from "../config/axios.js";
 import {
   initializeSocket,
   receiveMessage,
-  sendMessage,
+  sendMessage
 } from "../config/socket";
 import { UserProvider, useUser } from "../context/User.context.jsx";
 import Markdown from "markdown-to-jsx";
@@ -18,12 +18,43 @@ const Project = () => {
   const [project, setProject] = useState(location.state.project);
   const [message, setmessage] = useState("");
   const [messages, setMessages] = useState([]);
-
   const { user } = useUser();
-
   const messageBox = React.createRef();
-
   const [users, setUsers] = useState([]);
+
+  function SyntaxHighlightedCode(props) {
+    const ref = useRef(null)
+
+    React.useEffect(() => {
+        if (ref.current && props.className?.includes('lang-') && window.hljs) {
+            window.hljs.highlightElement(ref.current)
+
+            // hljs won't reprocess the element unless this attribute is removed
+            ref.current.removeAttribute('data-highlighted')
+        }
+    }, [ props.className, props.children ])
+
+    return <code {...props} ref={ref} />
+  }
+
+  function WriteAiMessage(message) {
+        
+    const data = message
+        return (
+            <div
+                className='overflow-auto bg-slate-950 text-white rounded-sm p-2'
+            >
+                <Markdown
+                    children={message}
+                    options={{
+                        overrides: {
+                            code: SyntaxHighlightedCode,
+                        },
+                    }}
+                />
+            </div>)
+  }
+
 
   const handleUserClick = (_id) => {
     setSelectedUserId((prev) => {
@@ -82,13 +113,11 @@ const Project = () => {
       });
   }, []);
 
-  
-
   const send = () => {
     if (message === "") return;
 
     sendMessage("project-message", {
-      message: message,
+       message,
       sender: user,
     });
 
@@ -136,28 +165,20 @@ const Project = () => {
                 key={index}
                 className={`flex 
                  ${msg.sender.email === user.email 
-                 ? "ml-auto bg-gray-200"   // Your messages → right
-                 : "mr-auto bg-gray-200"}   // Others → left
+                 ? "ml-auto bg-gray-200 text-black"   // Your messages → right
+                 : "mr-auto bg-gray-200 text-black"}   // Others → left
                  message flex-col p-2 w-fit rounded-md max-w-80`}
               >
                 <small className="opacity-65 text-xs text-black">
                   {msg.sender.email === user.email ? "You" : msg.sender.email}
                 </small>
 
-                <p className="text-sm text-black">
-
-                  {msg.sender._id === "ai" ? (
-
-                    <div className="overflow-auto bg-slate-950 text-white rounded-sm p-2 ">
-
-                      <Markdown>{msg.message}</Markdown>
-
-                    </div>
-
-                  ) : (
-                    msg.message 
-                  )}
-                </p>
+                  {msg.sender._id === "ai" ? 
+                    WriteAiMessage(msg.message)
+                   :                   
+                    msg.message                      
+                  }
+                
 
               </div>
             ))}

@@ -8,6 +8,13 @@ import {
 } from "../config/socket";
 import { UserProvider, useUser } from "../context/User.context.jsx";
 import Markdown from "markdown-to-jsx";
+import hljs from 'highlight.js'
+import 'highlight.js/styles/atom-one-dark.css'
+
+import getWebContainer from "../config/webContainer.js";
+import FileTreeNode from "../components/FileTreeNode.jsx";
+
+
 
 const Project = () => {
   const location = useLocation();
@@ -21,31 +28,95 @@ const Project = () => {
   const { user } = useUser();
   const messageBox = React.createRef();
   const [users, setUsers] = useState([]);
+  const [fileTree, setFileTree ] = useState({})
+ const [currentFile, setCurrentFile] = useState(null)
+ const [openFiles, setOpenFiles] = useState([])
+ const [webContainer, setWebContainer ] = useState(null)
 
-  function SyntaxHighlightedCode(props) {
-    const ref = useRef(null)
+function getLanguageFromExtension(filename) {
+  const ext = filename.split(".").pop().toLowerCase();
 
-    React.useEffect(() => {
-        if (ref.current && props.className?.includes('lang-') && window.hljs) {
-            window.hljs.highlightElement(ref.current)
+  const map = {
+    js: "javascript",
+    jsx: "javascript",
+    ts: "typescript",
+    tsx: "typescript",
+    py: "python",
+    java: "java",
+    c: "c",
+    cpp: "cpp",
+    cs: "csharp",
+    css: "css",
+    html: "xml", // highlight.js uses "xml" for HTML
+    json: "json",
+    md: "markdown",
+    sh: "bash",
+    go: "go",
+    php: "php",
+    rb: "ruby",
+    swift: "swift",
+    kt: "kotlin",
+    rs: "rust",
+  };
 
-            // hljs won't reprocess the element unless this attribute is removed
-            ref.current.removeAttribute('data-highlighted')
+  return map[ext] || null; // return null if unknown
+}
+
+function SyntaxHighlightedCode({ className, children }) {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (ref.current) {
+      let result;
+      try {
+        if (className?.startsWith("lang-")) {
+          const lang = className.replace("lang-", "");
+          result = hljs.highlight(children, { language: lang });
+        } else {
+          // Auto-detect language if no lang- class is provided
+          result = hljs.highlightAuto(children);
         }
-    }, [ props.className, props.children ])
+        ref.current.innerHTML = result.value;
+      } catch (e) {
+        // fallback: just render plain text
+        ref.current.textContent = children;
+      }
+    }
+  }, [className, children]);
 
-    return <code {...props} ref={ref} />
-  }
+  return <code ref={ref} className={className} />;
+}
+
+  function buildNestedTree(flatTree) {
+  const nested = {};
+
+  Object.entries(flatTree).forEach(([path, value]) => {
+    const parts = path.split("/");
+    let current = nested;
+
+    parts.forEach((part, idx) => {
+      if (!current[part]) {
+        current[part] = idx === parts.length - 1 ? value : { folder: true, children: {} };
+      }
+      if (current[part].children) {
+        current = current[part].children;
+      }
+    });
+  });
+
+  return nested;
+}
 
   function WriteAiMessage(message) {
         
-    const data = message
+    const messageObject = JSON.parse(message)
+
         return (
             <div
                 className='overflow-auto bg-slate-950 text-white rounded-sm p-2'
             >
                 <Markdown
-                    children={message}
+                    children={messageObject.text}
                     options={{
                         overrides: {
                             code: SyntaxHighlightedCode,
@@ -54,7 +125,6 @@ const Project = () => {
                 />
             </div>)
   }
-
 
   const handleUserClick = (_id) => {
     setSelectedUserId((prev) => {
@@ -91,7 +161,35 @@ const Project = () => {
       initializeSocket(project._id);
     }
 
+    if(!webContainer){
+       getWebContainer().then(container => {
+        setWebContainer(container)
+
+        console.log("conatiner started");
+        
+
+       })
+    }
+
     receiveMessage("project-message", (data) => {
+
+      // console.log(JSON.parse(data.message));
+      
+
+      const message =  JSON.parse(data.message);
+      
+      if (message.fileTree)
+      {
+       const nestedTree = buildNestedTree(message.fileTree);
+       setFileTree(nestedTree);
+
+       if (webContainer){
+
+       webContainer.mount(message.fileTree).then(() => console.log("Mounted"));
+
+       }
+
+      }
 
       setMessages((prevMessages) => [...prevMessages, data]);
 
@@ -133,9 +231,9 @@ const Project = () => {
   }
 
   return (
-    <main className="h-screen w-screen flex">
+    <main className="h-screen w-screen flex bg-slate-300">
       <section className="left  flex flex-col h-screen min-w-92 relative  ">
-        <header className=" flex justify-between items-center  p-4 w-full bg-slate-800 ">
+        <header className=" flex justify-between items-center  p-4 w-full bg-slate-600 ">
           <button className="flex gap-2" onClick={() => setIsModalOpen(true)}>
             <i className="ri-add-fill"></i>
             <p>Add Collaborators</p>
@@ -174,6 +272,7 @@ const Project = () => {
                 </small>
 
                   {msg.sender._id === "ai" ? 
+
                     WriteAiMessage(msg.message)
                    :                   
                     msg.message                      
@@ -246,6 +345,99 @@ const Project = () => {
               })}
           </div>
         </div>
+      </section>
+
+      <section className="right bg-red-50 flex-grow h-full text-black flex">
+        <div className="explorer h-full max-w-64 min-w-52 bg-slate-200 overflow-auto">
+         <div className="file-tree w-full mt-0 p-2">
+           {Object.entries(fileTree).map(([name, node]) => (
+             <FileTreeNode
+              key={name}
+              name={name}
+              node={node}
+              fullPath={name}
+              setCurrentFile={setCurrentFile}
+              setOpenFiles={setOpenFiles}
+             />
+           ))}
+         </div>
+        </div>
+
+
+        {
+          currentFile && (
+
+          <div className="code-editor flex flex-col flex-grow h-full">
+          <div className="top flex">
+              {
+                openFiles.map((file,index)=> (
+                  <button
+                    key={index}
+                    onClick={() => {
+                    setCurrentFile(file);
+                    
+                    }}
+
+                  className={`tree-element cursor-pointer p-2 px-4 flex items-center w-fit gap-2 bg-slate-300 ${currentFile=== file ? 'bg-slate-400' : ''}`}
+                  >
+                    <p className='font-semibold text-lg' >
+                      {file}
+                    </p>
+                  </button>
+                ))
+              }
+          </div>
+          <div className="bottom flex flex-grow max-w-full shrink overflow-auto">
+            {
+              fileTree[ currentFile ] && 
+              (
+                <div className="code-editor-area h-full overflow-auto flex-grow bg-slate-50">
+                  <pre className="hljs h-full bg-blue-950 text-white rounded-lg p-4 overflow-auto">
+                    <code
+                      className="hljs h-full outline-none"
+                      contentEditable
+                      suppressContentEditableWarning
+                      onBlur={(e) => {
+                        const updatedContent = e.target.innerText;
+                        setFileTree(prevFileTree => ({
+                          ...prevFileTree,
+                          [ currentFile ]: {
+                            ...prevFileTree[ currentFile ],
+                            content: updatedContent
+                          }
+                        }));
+                      }}
+                      dangerouslySetInnerHTML={{
+                        __html: (() => {
+                          const code = fileTree[currentFile].file.contents;
+                          const lang = getLanguageFromExtension(currentFile);
+                          try {
+                            if (lang) {
+                              return hljs.highlight(code, { language: lang }).value;
+                            } else {
+                              return hljs.highlightAuto(code).value;
+                            }
+                          } catch {
+                            return code;
+                          }
+                        })()
+                      }}
+                      style={{
+                        whiteSpace: 'pre-wrap',
+                        paddingBottom: '25rem',
+                        counterSet: 'line-numbering',
+                      }}
+                    />
+                  </pre>
+                </div>
+              )
+                 
+            }
+
+          </div>
+          </div>
+          )
+        }
       </section>
 
       {isModalOpen && (

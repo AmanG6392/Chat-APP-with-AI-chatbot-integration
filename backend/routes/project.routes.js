@@ -3,7 +3,8 @@ import {
     createProjectControler,
     getAllProject ,
     addUserToProject,
-    getProjectById
+    getProjectById,
+    updatefileTree
 
 } from '../controllers/project.controler.js';   
 import authUser from '../middleware/auth.middleware.js';
@@ -31,6 +32,13 @@ router.put('/add-user',
 router.route('/getprojectId/:projectId').get(
     authUser,
     getProjectById
+)
+
+router.route('/update-file-tree').put(
+    authUser,
+    body('projectId').isString().withMessage('Project ID is required'),
+    body('fileTree').isObject().withMessage('File tree is required'),
+    updatefileTree
 )
 
 

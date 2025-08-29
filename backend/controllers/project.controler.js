@@ -3,7 +3,8 @@ import {
   createProject, 
   getAllProjectByUserID,
   addUsersToProject,
-  getProjectUsingId
+  getProjectUsingId,
+  updateFileTree
 
 } from "../services/project.service.js";
 
@@ -121,4 +122,31 @@ const getProjectById = async(req,res) => {
 
 }
 
-export { createProjectControler,getAllProject,addUserToProject , getProjectById }
+const updatefileTree = async (req, res) => {
+    const errors = validationResult(req);
+
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
+    try {
+
+        const { projectId, fileTree } = req.body;
+
+        const project = await updateFileTree({
+            projectId,
+            fileTree
+        })
+
+        return res.status(200).json({
+            project
+        })
+
+    } catch (err) {
+        console.log(err)
+        res.status(400).json({ error: err.message })
+    }
+
+}
+
+export { createProjectControler,getAllProject,addUserToProject , getProjectById , updatefileTree}

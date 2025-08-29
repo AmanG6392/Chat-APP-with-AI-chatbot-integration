@@ -16,6 +16,7 @@ import FileTreeNode from "../components/FileTreeNode.jsx";
 
 
 
+
 const Project = () => {
   const location = useLocation();
 
@@ -32,6 +33,8 @@ const Project = () => {
  const [currentFile, setCurrentFile] = useState(null)
  const [openFiles, setOpenFiles] = useState([])
  const [webContainer, setWebContainer ] = useState(null)
+ const [iframeUrl,setIframeUrl] = useState(null)
+ const [runProcess,setRunProcess] = useState(null)
 
 function getLanguageFromExtension(filename) {
   const ext = filename.split(".").pop().toLowerCase();
@@ -173,10 +176,11 @@ function SyntaxHighlightedCode({ className, children }) {
 
     receiveMessage("project-message", (data) => {
 
-      // console.log(JSON.parse(data.message));
+      console.log(JSON.parse(data.message));
       
 
       const message =  JSON.parse(data.message);
+
       
       if (message.fileTree)
       {
@@ -230,7 +234,7 @@ function SyntaxHighlightedCode({ className, children }) {
     }
   }
 
-  return (
+  return ( 
     <main className="h-screen w-screen flex bg-slate-300">
       <section className="left  flex flex-col h-screen min-w-92 relative  ">
         <header className=" flex justify-between items-center  p-4 w-full bg-slate-600 ">
@@ -364,11 +368,11 @@ function SyntaxHighlightedCode({ className, children }) {
         </div>
 
 
-        {
-          currentFile && (
 
-          <div className="code-editor flex flex-col flex-grow h-full">
-          <div className="top flex">
+        <div className="code-editor flex flex-col flex-grow h-full">
+          <div className="top flex justify-between w-full">
+
+            <div className="files flex">
               {
                 openFiles.map((file,index)=> (
                   <button
@@ -386,6 +390,53 @@ function SyntaxHighlightedCode({ className, children }) {
                   </button>
                 ))
               }
+            </div>
+
+            <div className="actions flex gap-2">
+              <button 
+                 onClick={async () => {
+                  await webContainer.mount(fileTree)
+
+
+                      const installProcess = await webContainer.spawn("npm", [ "install" ])
+                      installProcess.output.pipeTo(new WritableStream({
+                      write(chunk)
+                       {
+                          console.log(chunk)
+                        }
+                      }))
+
+                      if (runProcess) {
+                           runProcess.kill()                                     
+                      }
+
+                      let tempRunProcess = await webContainer.spawn("npm", [ "start" ])
+                      tempRunProcess.output.pipeTo(new WritableStream
+                      ({
+                       write(chunk)
+                        {
+                          console.log(chunk)
+                         }
+                      }))
+
+                      setRunProcess(tempRunProcess)
+                      
+                     
+                      webContainer.on('server-ready', (port, url) => {
+                        console.log(port, url);
+                        setIframeUrl(url)
+                        
+                      })
+
+
+
+                 }}
+                className="p-2 px-4 bg-slate-500 text-white"
+              > 
+              run
+              </button>
+            </div>
+
           </div>
           <div className="bottom flex flex-grow max-w-full shrink overflow-auto">
             {
@@ -397,15 +448,20 @@ function SyntaxHighlightedCode({ className, children }) {
                       className="hljs h-full outline-none"
                       contentEditable
                       suppressContentEditableWarning
-                      onBlur={(e) => {
-                        const updatedContent = e.target.innerText;
-                        setFileTree(prevFileTree => ({
+                      onBlur={async (e) => {
+                      const updatedContent = e.target.innerText;
+                        // Update local state
+                      setFileTree(prevFileTree => ({
                           ...prevFileTree,
-                          [ currentFile ]: {
-                            ...prevFileTree[ currentFile ],
-                            content: updatedContent
+                          [currentFile]: {
+                            ...prevFileTree[currentFile],
+                            file: {
+                              ...prevFileTree[currentFile].file,
+                              contents: updatedContent,
+                            }
                           }
                         }));
+                        
                       }}
                       dangerouslySetInnerHTML={{
                         __html: (() => {
@@ -435,9 +491,29 @@ function SyntaxHighlightedCode({ className, children }) {
             }
 
           </div>
+        </div>
+
+        {iframeUrl && webContainer &&
+          
+
+          (
+          <div className="flex min-w-96 flex-col h-full">
+
+            <div className="address-bar">
+              <input type="text"
+               className="w-full p-2 px-4 bg-slate-200" 
+               value={iframeUrl}
+               onChange={(e) => setIframeUrl(e.target.value)}              
+              />
+            </div>
+            <iframe src={iframeUrl} className="w-full h-full"></iframe>  
+
           </div>
           )
+
         }
+          
+        
       </section>
 
       {isModalOpen && (

@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useContext, useRef } from "react";
-import { useLocation } from "react-router-dom";
+import React, { useState, useEffect, useContext, useRef, useCallback } from "react";
+import { useLocation ,useNavigate} from "react-router-dom";
 import axios from "../config/axios.js";
 import {
   initializeSocket,
   receiveMessage,
-  sendMessage
+  sendMessage,
+  JoinRoom, 
+  NowJoinRoom
 } from "../config/socket";
 import { UserProvider, useUser } from "../context/User.context.jsx";
 import Markdown from "markdown-to-jsx";
@@ -13,30 +15,33 @@ import 'highlight.js/styles/atom-one-dark.css'
 
 import getWebContainer from "../config/webContainer.js";
 import FileTreeNode from "../components/FileTreeNode.jsx";
+import { Socket } from "socket.io-client";
+
 
 
 
 
 const Project = () => {
-  const location = useLocation();
+ const location = useLocation();
+ const navigate = useNavigate()
 
-  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedUserId, setSelectedUserId] = useState(new Set());
-  const [project, setProject] = useState(location.state.project);
-  const [message, setmessage] = useState("");
-  const [messages, setMessages] = useState([]);
-  const { user } = useUser();
-  const messageBox = React.createRef();
-  const [users, setUsers] = useState([]);
-  const [fileTree, setFileTree ] = useState({})
+ const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
+ const [isModalOpen, setIsModalOpen] = useState(false);
+ const [selectedUserId, setSelectedUserId] = useState(new Set());
+ const [project, setProject] = useState(location.state.project);
+ const [message, setmessage] = useState("");
+ const [messages, setMessages] = useState([]);
+ const { user } = useUser();
+ const messageBox = React.createRef();
+ const [users, setUsers] = useState([]);
+ const [fileTree, setFileTree ] = useState({})
  const [currentFile, setCurrentFile] = useState(null)
  const [openFiles, setOpenFiles] = useState([])
  const [webContainer, setWebContainer ] = useState(null)
  const [iframeUrl,setIframeUrl] = useState(null)
  const [runProcess,setRunProcess] = useState(null)
 
-function getLanguageFromExtension(filename) {
+ function getLanguageFromExtension(filename) {
   const ext = filename.split(".").pop().toLowerCase();
 
   const map = {
@@ -63,9 +68,9 @@ function getLanguageFromExtension(filename) {
   };
 
   return map[ext] || null; // return null if unknown
-}
+ }
 
-function SyntaxHighlightedCode({ className, children }) {
+ function SyntaxHighlightedCode({ className, children }) {
   const ref = useRef(null);
 
   useEffect(() => {
@@ -88,9 +93,9 @@ function SyntaxHighlightedCode({ className, children }) {
   }, [className, children]);
 
   return <code ref={ref} className={className} />;
-}
+ }
 
-  function buildNestedTree(flatTree) {
+ function buildNestedTree(flatTree) {
   const nested = {};
 
   Object.entries(flatTree).forEach(([path, value]) => {
@@ -108,9 +113,9 @@ function SyntaxHighlightedCode({ className, children }) {
   });
 
   return nested;
-}
+ }
 
-  function WriteAiMessage(message) {
+ function WriteAiMessage(message) {
         
     const messageObject = JSON.parse(message)
 
@@ -127,9 +132,9 @@ function SyntaxHighlightedCode({ className, children }) {
                     }}
                 />
             </div>)
-  }
+ }
 
-  const handleUserClick = (_id) => {
+ const handleUserClick = (_id) => {
     setSelectedUserId((prev) => {
       const updated = new Set(prev);
       if (updated.has(_id)) {
@@ -139,9 +144,9 @@ function SyntaxHighlightedCode({ className, children }) {
       }
       return updated;
     });
-  };
+ };
 
-  function addCollaborator() {
+ function addCollaborator() {
     axios
       .put("/projects/add-user", {
         // using to send the required data....
@@ -157,11 +162,82 @@ function SyntaxHighlightedCode({ className, children }) {
       .catch((err) => {
         console.log(err.response.data);
       });
-  }
+ }
+
+ const send = () => {
+    if (message === "") return;
+
+    sendMessage("project-message", {
+       message,
+      sender: user,
+    });
+
+    setMessages((prevMessages) => [...prevMessages, { sender: user, message }]); // Update messages state
+
+    setmessage("");
+ };
+
+ function scrollToBottom() {
+    if (messageBox.current) {
+      messageBox.current.scrollTop = messageBox.current.scrollHeight;
+    }
+ }
+
+ function saveFileTree(ft){
+    axios.put('/projects/update-file-tree',{
+      projectId: project._id,
+      fileTree:ft
+    }).then(res => {
+       
+
+      console.log(res.data);
+      
+    }).catch( err => {
+      console.log(err);
+      
+    })
+ }
+
+ const email = user.email
+ const handleSubmitForm = useCallback(() => {
+
+  console.log("📡 Emitting room:join with data:", { email });
+  JoinRoom("room:join", { email});
+  
+ }, [email]);
+
+ const handleJoinRoom = useCallback((data) =>{
+
+    const{ email, roomId } = data;
+    navigate(`/room/${roomId}`)
+
+ })
 
   useEffect(() => {
+    axios
+    .get(`/projects/getprojectId/${location.state.project._id}`)
+    .then((res) => {
+        setProject(res.data.project);
+         setFileTree(res.data.project.fileTree || {})
+    });
+
+    axios
+    .get("/users/allUsers")
+    .then((res) => {
+        setUsers(res.data.users);
+    })
+    .catch((err) => {
+        console.log(err);
+    });
+
     if (project?._id) {
-      initializeSocket(project._id);
+     const s = initializeSocket(project._id);
+     s.on("connect", () => {
+     console.log("✅ Socket connected with ID:", s.id);
+     });
+     s.on("connect_error", (err) => {
+     console.error("❌ Socket connection failed:", err.message);
+     });
     }
 
     if(!webContainer){
@@ -171,7 +247,7 @@ function SyntaxHighlightedCode({ className, children }) {
         console.log("conatiner started");
         
 
-       })
+      })
     }
 
     receiveMessage("project-message", (data) => {
@@ -199,58 +275,12 @@ function SyntaxHighlightedCode({ className, children }) {
 
     });
 
-    axios
-      .get(`/projects/getprojectId/${location.state.project._id}`)
-      .then((res) => {
-        setProject(res.data.project);
-         setFileTree(res.data.project.fileTree || {})
-      });
+    NowJoinRoom("room:join", handleJoinRoom)
+   
+  }, [initializeSocket]);
+  
 
-    axios
-      .get("/users/allUsers")
-      .then((res) => {
-        setUsers(res.data.users);
-      })
-      .catch((err) => {
-        console.log(err);
-      });
-  }, []);
-
-  const send = () => {
-    if (message === "") return;
-
-    sendMessage("project-message", {
-       message,
-      sender: user,
-    });
-
-    setMessages((prevMessages) => [...prevMessages, { sender: user, message }]); // Update messages state
-
-    setmessage("");
-  };
-
-  function scrollToBottom() {
-    if (messageBox.current) {
-      messageBox.current.scrollTop = messageBox.current.scrollHeight;
-    }
-  }
-
-  function saveFileTree(ft){
-    axios.put('/projects/update-file-tree',{
-      projectId: project._id,
-      fileTree:ft
-    }).then(res => {
-       
-
-      console.log(res.data);
-      
-    }).catch( err => {
-      console.log(err);
-      
-    })
-  }
-
-  return ( 
+ return ( 
     <main className="h-screen w-screen flex bg-slate-300">
       <section className="left  flex flex-col h-screen min-w-92 relative  ">
         <header className=" flex justify-between items-center  p-4 w-full bg-slate-600 ">
@@ -271,6 +301,11 @@ function SyntaxHighlightedCode({ className, children }) {
               style={{ fontSize: "22px", color: "grey-800" }}
             ></i>
           </button>
+          
+          <button 
+            onClick={ handleSubmitForm}>Call
+          </button>
+         
         </header>
 
         <div className="conversation-area w-full pt-1 pb-14 flex flex-grow flex-col bg-slate-400 gap-1 overflow-y-auto relative">
@@ -571,7 +606,7 @@ function SyntaxHighlightedCode({ className, children }) {
         </div>
       )}
     </main>
-  );
+ );
 };
 
 export default Project;

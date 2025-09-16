@@ -9,10 +9,10 @@ function App() {
   return (
     <>
    
-      <UserProvider>
+      <UserProvider> 
 
-        <AppRoutes/>
-
+          <AppRoutes/>
+         
       </UserProvider>
    
     </>

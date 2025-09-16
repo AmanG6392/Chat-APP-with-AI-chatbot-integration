@@ -4,6 +4,7 @@ import Login from '../screen/Login.jsx'
 import Register from '../screen/Register.jsx'
 import Home from '../screen/Home.jsx'
 import Project from '../screen/Project.jsx'
+import Room from '../screen/Room.jsx'
 import UserAuth from '../auth/UserAuth.jsx'
 
 
@@ -17,6 +18,7 @@ const AppRoutes = () => {
 
         <Route path="/register" element={<Register/>}/>
         <Route path="/project" element={<UserAuth><Project/></UserAuth>}/>
+        <Route path="/room/:roomId" element={<UserAuth><Room/></UserAuth>}/>
         
     </Routes>
 

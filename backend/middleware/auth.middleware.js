@@ -21,7 +21,7 @@ const authUser = async (req, res, next) => {
         res.cookie('token', '')
         return res.status(401).send({error: 'Unauthorized User '})
       }
-      const decodedToken =  jwt.verify(token, process.env.JWT_secret);
+      const decodedToken =  jwt.verify(token, process.env.JWT_SECRET);
 
       const user = await User.findOne(decodedToken?._id).select('-password')
 

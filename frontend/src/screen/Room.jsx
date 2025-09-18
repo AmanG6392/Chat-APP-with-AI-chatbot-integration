@@ -233,24 +233,37 @@ const RoomPage = () => {
 
   // register negotiationneeded on the peer
   useEffect(() => {
-    if (!peer || !peer.peer) return;
-    peer.peer.addEventListener("negotiationneeded", handleNegoNeeded);
+    if (!peer || !peer.peer) {
+      console.warn("[Room.jsx] peer not ready yet, skipping negotiationneeded listener");
+      return;
+    }
+  
+    const pc = peer.peer;
+    pc.addEventListener("negotiationneeded", handleNegoNeeded);
+  
     return () => {
-      if (peer && peer.peer) peer.peer.removeEventListener("negotiationneeded", handleNegoNeeded);
+      pc.removeEventListener("negotiationneeded", handleNegoNeeded);
     };
   }, [handleNegoNeeded]);
 
   // attach "track" handler once
   useEffect(() => {
-    if (!peer || !peer.peer) return;
+    if (!peer || !peer.peer) {
+      console.warn("[Room.jsx] peer not ready yet, skipping track listener");
+      return;
+    }
+  
+    const pc = peer.peer;
     const onTrack = (ev) => {
       console.log("📥 Received remote track", ev.track);
       remoteMediaStreamRef.current.addTrack(ev.track);
       setRemoteStream(remoteMediaStreamRef.current);
     };
-    peer.peer.addEventListener("track", onTrack);
+  
+    pc.addEventListener("track", onTrack);
+  
     return () => {
-      if (peer && peer.peer) peer.peer.removeEventListener("track", onTrack);
+      pc.removeEventListener("track", onTrack);
     };
   }, []);
 
@@ -267,29 +280,40 @@ const RoomPage = () => {
     }
   }, [remoteStream]);
 
-  // Register socket events ONCE
-  useEffect(() => {
-    if (!userJoined || !incomingcall) {
-      console.error("[Room.jsx] Socket helpers not ready!");
-      return;
+ useEffect(() => {
+  let mounted = true;
+
+  async function registerSocketListeners() {
+    try {
+      // Wait for socket to initialize (if your socket.js has a "getSocket" or "initSocket")
+      // Example: await initSocket();  <-- only if your socket.js exports such a function
+
+      if (!userJoined || !incomingcall) {
+        console.warn("[Room.jsx] Socket helpers not ready yet — retrying in 200ms...");
+        setTimeout(registerSocketListeners, 200);
+        return;
+      }
+
+      console.log("[Room.jsx] ✅ Registering socket listeners...");
+      userJoined("user:joined", handleUserJoined);
+      incomingcall("incoming:call", handleIncomingCall);
+      callAccepting("call:accepted", handlecallAccepted);
+      negotiationIncoming("peer:nego:needed", handleNegoNeededIncoming);
+      negotiationFinal("peer:nego:final", handleNegotiationFinal);
+    } catch (err) {
+      console.error("[Room.jsx] Failed to register socket listeners:", err);
     }
+  }
 
-    userJoined("user:joined", handleUserJoined);
-    incomingcall("incoming:call", handleIncomingCall);
-    callAccepting("call:accepted", handlecallAccepted);
-    negotiationIncoming("peer:nego:needed", handleNegoNeededIncoming);
-    negotiationFinal("peer:nego:final", handleNegotiationFinal);
+  registerSocketListeners();
 
-    // cleanup
-    return () => {
-      try {
-        // if your socket API supports removing handlers, call it here
-        // e.g., userJoined.off('user:joined'), etc. Otherwise leaving is okay if SPA persists.
-      } catch (e) {}
-    };
-    // Intentionally empty deps: we want to register these exactly once
-    // handlers use refs where necessary (myStreamRef) to avoid stale closures.
-  }, []); // run only once on mount
+  return () => {
+    mounted = false;
+    // If your socket API supports removing listeners, do it here
+    // Example: socket.off("user:joined", handleUserJoined);
+  };
+}, []);
+
 
   return (
     <div>

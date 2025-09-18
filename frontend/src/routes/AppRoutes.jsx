@@ -6,13 +6,15 @@ import Home from '../screen/Home.jsx'
 import Project from '../screen/Project.jsx'
 import Room from '../screen/Room.jsx'
 import UserAuth from '../auth/UserAuth.jsx'
+import ErrorBoundary from '../config/ErrorBoundary.jsx'
 
 
 const AppRoutes = () => {
   return (
     <BrowserRouter>
     
-    <Routes>
+      <ErrorBoundary>
+         <Routes>
         <Route path="/" element={<UserAuth><Home/></UserAuth>}/>
         <Route path="/login" element={<Login/>}/>
 
@@ -21,6 +23,7 @@ const AppRoutes = () => {
         <Route path="/room/:roomId" element={<UserAuth><Room/></UserAuth>}/>
         
     </Routes>
+      </ErrorBoundary>
 
     </BrowserRouter>
   )

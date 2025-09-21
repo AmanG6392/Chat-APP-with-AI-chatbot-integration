@@ -20,7 +20,7 @@ const FileTreeNode = ({ name, node, fullPath, setCurrentFile, setOpenFiles }) =>
         onClick={handleClick}
         className="cursor-pointer p-1 hover:bg-slate-300 rounded"
       >
-        {isFolder ? "📂 " : "📄 "} 
+        {isFolder ? "📂 " : "📄 "}
         {name}
       </div>
 

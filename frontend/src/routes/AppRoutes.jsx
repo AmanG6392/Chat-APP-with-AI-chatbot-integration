@@ -4,26 +4,21 @@ import Login from '../screen/Login.jsx'
 import Register from '../screen/Register.jsx'
 import Home from '../screen/Home.jsx'
 import Project from '../screen/Project.jsx'
-import Room from '../screen/Room.jsx'
 import UserAuth from '../auth/UserAuth.jsx'
-import ErrorBoundary from '../config/ErrorBoundary.jsx'
 
 
 const AppRoutes = () => {
   return (
     <BrowserRouter>
     
-      <ErrorBoundary>
-         <Routes>
+    <Routes>
         <Route path="/" element={<UserAuth><Home/></UserAuth>}/>
         <Route path="/login" element={<Login/>}/>
 
         <Route path="/register" element={<Register/>}/>
         <Route path="/project" element={<UserAuth><Project/></UserAuth>}/>
-        <Route path="/room/:roomId" element={<UserAuth><Room/></UserAuth>}/>
         
     </Routes>
-      </ErrorBoundary>
 
     </BrowserRouter>
   )

@@ -64,10 +64,9 @@ const Home = () => {
 
   return (
     <main className='p-4'>
-      <div className="projects flex flex-wrap gap-3 " >
+      <div className="projects flex flex-wrap gap-3 ">
         <button
           className="project p-4 h-12 w-40 border rounded-md border-slate-300 flex items-center justify-center"
-          
           onClick={() => setShowModal(true)}
         >
           <div className="flex ">New project</div>
@@ -107,8 +106,6 @@ const Home = () => {
           <i className="ri-logout-box-line" style={{ fontSize: '25px', color: 'white' }}></i> 
         
         </button>
-
-        
       </div>
 
       {/* Modal */}

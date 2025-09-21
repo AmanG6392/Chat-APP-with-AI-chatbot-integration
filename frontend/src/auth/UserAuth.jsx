@@ -37,12 +37,19 @@ const UserAuth = ({children }) => {
             }
         }
 
+       
+
+
+
         // If no token, go to login
         if (!token) {
           navigate(`/login`)
           return
         }
      
+       
+
+
         // If token exists but no user, go to register
         if (!user) {
 

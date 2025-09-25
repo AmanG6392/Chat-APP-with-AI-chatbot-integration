@@ -44,6 +44,14 @@ const Project = () => {
   const [textPosition, setTextPosition] = useState({ x: 0, y: 0 });
   const [toolColor, setToolColor] = useState("#000000");
   const [toolWidth, setToolWidth] = useState(2);
+  const [eraserSize, setEraserSize] = useState(20); 
+  const [ctrlPressed, setCtrlPressed] = useState(false);
+  const [textBox, setTextBox] = useState(null); 
+  const [isEditingText, setIsEditingText] = useState(false);
+  const [fontSize, setFontSize] = useState(16); // default font size
+  const [fontFamily, setFontFamily] = useState("sans-serif"); // default font
+
+
  
 
 
@@ -297,10 +305,21 @@ const Project = () => {
     redraw(ctx, canvas);
   }
   else if (selectedTool === "text") {
-    setTextInputVisible(true);
-    setTextInputValue("");
-    setTextPosition({ x: e.offsetX, y: e.offsetY });
-  } 
+  const rect = canvasRef.current.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  setTextBox({
+    x,
+    y,
+    width: 150,
+    height: 30,
+    text: "",
+  });
+  setIsEditingText(true);
+  return; // stop further drawing
+  }
+
   else {
     // rectangle, circle, line
     shapes.current.push({
@@ -351,6 +370,43 @@ const Project = () => {
     window.removeEventListener("resize", resizeCanvas);
   };
   }, [selectedTool]);
+  
+  useEffect(() => {
+  const handleKeyDown = (e) => {
+    if (e.key === "Control") setCtrlPressed(true);
+  };
+
+  const handleKeyUp = (e) => {
+    if (e.key === "Control") setCtrlPressed(false);
+  };
+
+  window.addEventListener("keydown", handleKeyDown);
+  window.addEventListener("keyup", handleKeyUp);
+
+  return () => {
+    window.removeEventListener("keydown", handleKeyDown);
+    window.removeEventListener("keyup", handleKeyUp);
+  };
+ }, []);
+
+  const startTextInput = (e) => {
+  if (selectedTool !== "text") return;
+
+  const rect = canvasRef.current.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  // Create new text box
+  setTextBox({
+    x,
+    y,
+    width: 150, // default width of box
+    height: 30, // default height
+    text: "",
+  });
+  setIsEditingText(true);
+ };
+ 
 
   const redraw = (ctx, canvas) => {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -381,10 +437,10 @@ const Project = () => {
         ctx.stroke();
         break;
       case "text":
-        ctx.fillStyle = shape.color || "black";
-        ctx.font = shape.width + "px sans-serif";
-        ctx.fillText(shape.text, shape.startX, shape.startY);
-        break;
+      ctx.fillStyle = shape.color || "black";
+      ctx.font = `${shape.width || 16}px ${shape.font || "sans-serif"}`;
+      ctx.fillText(shape.text, shape.startX, shape.startY);
+      break;
       case "paint":
         ctx.fillStyle = shape.color || "black";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -1059,6 +1115,32 @@ const Project = () => {
                     onChange={(e) => setToolWidth(Number(e.target.value))}
                     className="w-full"
                   />
+                   
+                   <div className="flex flex-col gap-2">
+                      <label className="text-sm">Font Size</label>
+                      <input
+                        type="number"
+                        value={fontSize}
+                        min={8}
+                        max={72}
+                        onChange={(e) => setFontSize(Number(e.target.value))}
+                        className="w-full p-1 border rounded"
+                      />
+                    
+                      <label className="text-sm">Font Family</label>
+                      <select
+                        value={fontFamily}
+                        onChange={(e) => setFontFamily(e.target.value)}
+                        className="w-full p-1 border rounded"
+                      >
+                        <option value="sans-serif">Sans-serif</option>
+                        <option value="serif">Serif</option>
+                        <option value="monospace">Monospace</option>
+                        <option value="cursive">Cursive</option>
+                        <option value="fantasy">Fantasy</option>
+                      </select>
+                    </div>
+
                   <button onClick={() => setSelectedTool("pencil")} className="p-1 bg-white rounded-md hover:bg-gray-100">✏️ Pencil</button>
                   <button onClick={() => setSelectedTool("rectangle")} className="p-1 bg-white rounded-md hover:bg-gray-100">🔲 Rectangle</button>
                   <button onClick={() => setSelectedTool("circle")} className="p-1 bg-white rounded-md hover:bg-gray-100">⚪ Circle</button>
@@ -1090,14 +1172,14 @@ const Project = () => {
                       height={400}
                       className="border border-gray-400 rounded-lg bg-white w-full h-full cursor-crosshair"
                       style={{
-                         cursor: selectedTool === 'eraser' ? 'url(/eraser-cursor.png), auto' : 'crosshair',
-                         cursor: selectedTool === "fill" ? "url('/image.png'), auto" : "crosshair"
-      
-      
+                          cursor:
+                            selectedTool === "eraser"
+                              ? `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="${ctrlPressed ? 50 : eraserSize}" width="${ctrlPressed ? 50 : eraserSize}"><circle cx="${ctrlPressed ? 25 : eraserSize/2}" cy="${ctrlPressed ? 25 : eraserSize/2}" r="${ctrlPressed ? 25 : eraserSize/2}" fill="white" stroke="black"/></svg>') ${ctrlPressed ? 25 : eraserSize/2} ${ctrlPressed ? 25 : eraserSize/2}, auto`
+                              : "crosshair",
                         }}
                     />
                     
-                    {/* Inline Text Input */}
+                    
                     {textInputVisible && (
                       <input
                         type="text"
@@ -1118,25 +1200,70 @@ const Project = () => {
                         }}
                 
                         onKeyDown={(e) => {
-      if (e.key === "Enter") {
-        // Draw text on canvas
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext("2d");
-        ctx.fillStyle = "black";
-        ctx.font = "16px sans-serif";
-        ctx.fillText(textInputValue, textPosition.x, textPosition.y);
-
-        // Hide input after drawing
-        setTextInputVisible(false);
-      }
+                       if (e.key === "Enter") {
+                         
+                         const canvas = canvasRef.current;
+                         const ctx = canvas.getContext("2d");
+                         ctx.fillStyle = "black";
+                         ctx.font = "16px sans-serif";
+                         ctx.fillText(textInputValue, textPosition.x, textPosition.y);
+                 
+                         
+                         setTextInputVisible(false);
+                       }
                         }}
-                        // hide input when user clicks away
+                        
                         className="absolute border border-gray-400 p-1 bg-white"
                         
-                        style={{ left: textPosition.x, top: textPosition.y,position: "absolute" }} // dynamically position where user clicked
+                        style={{ left: textPosition.x, top: textPosition.y,position: "absolute" }} 
                         autoFocus
                       />
                     )}
+
+                    {isEditingText && textBox && (
+                      <input
+                        type="text"
+                        value={textBox.text}
+                        autoFocus
+                        onChange={(e) =>
+                          setTextBox((prev) => ({ ...prev, text: e.target.value }))
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            // Draw text exactly with font size and family
+                            shapes.current.push({
+                              type: "text",
+                              text: textBox.text,
+                              startX: textBox.x,
+                              startY: textBox.y + fontSize, // baseline adjustment
+                              color: toolColor,
+                              width: fontSize,
+                              font: fontFamily
+                            });
+                    
+                            setTextBox(null);
+                            setIsEditingText(false);
+                            redraw(canvasRef.current.getContext("2d"), canvasRef.current);
+                          }
+                        }}
+                        style={{
+                          position: "absolute",
+                          left: textBox.x,
+                          top: textBox.y,
+                          width: textBox.width,
+                          height: textBox.height,
+                          border: "2px dashed gray",
+                          padding: "2px",
+                          fontSize: `${fontSize}px`,
+                          fontFamily: fontFamily,
+                          background: "transparent",
+                          color: toolColor,
+                          outline: "none",
+                        }}
+                      />
+                    )}
+
+
 
 
                   </div>
@@ -1148,7 +1275,7 @@ const Project = () => {
            
            (
            <>
-             {/* Original Code Editor + Iframe */}
+             
              {fileTree[currentFile] && (
                      <div className="code-editor-area h-full max-w-full overflow-auto flex-grow bg-slate-50">
                 <pre className="hljs h-full bg-blue-950 text-white rounded-none p-4 overflow-auto">
@@ -1197,15 +1324,7 @@ const Project = () => {
                      </div>
                )}
 
-              { /* {iframeUrl && (
-                <div className="flex min-w-96 flex-col h-full">
-                  <div className="address-bar">
-                    <input type="text" className="w-full p-2 px-4 bg-slate-200" value={iframeUrl} onChange={(e) => setIframeUrl(e.target.value)} />
-                  </div>
-                  <iframe src={iframeUrl} className="w-full h-full"></iframe>
-                </div>
-                )} */
-               }
+              
            </>
            )
           }

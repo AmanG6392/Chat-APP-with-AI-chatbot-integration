@@ -20,6 +20,7 @@ const UserAuth = ({children }) => {
          if(user){
 
             setLoading(false)
+            
         }
 
         const token = localStorage.getItem('token')
@@ -33,7 +34,7 @@ const UserAuth = ({children }) => {
             catch (err) {
             console.error('Auth check failed:', err)
             localStorage.removeItem('token')
-             navigate(`/login`)
+             navigate(`/landing`)
             }
         }
 
@@ -43,7 +44,7 @@ const UserAuth = ({children }) => {
 
         // If no token, go to login
         if (!token) {
-          navigate(`/login`)
+          navigate(`/landing`)
           return
         }
      

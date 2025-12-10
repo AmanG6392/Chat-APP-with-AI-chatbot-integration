@@ -2,13 +2,20 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const ai = new GoogleGenerativeAI(process.env.GOOGLE_AI_KEY);
 
+// const listModels = async () => {
+//   const models = await ai.listModels();
+//   console.log(models);
+// };
+
+// listModels();
+
 const generateResult = async (prompt) => 
   {
     try {
        const model = ai.getGenerativeModel 
     
       ({
-      model: "gemini-1.5-flash",
+      model: "gemini-2.5-flash",
       generationConfig: {
         responseMimeType: "application/json",
         temperature:0.4

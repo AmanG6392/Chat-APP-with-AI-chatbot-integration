@@ -54,14 +54,17 @@ const Home = () => {
     <main className="relative min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-black p-6 text-white overflow-hidden">
       
       {/* Floating New Project Button */}
-      <motion.div
-        whileHover={{ scale: 1.1, rotateY: 10 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={() => setShowModal(true)}
-        className="absolute top-4 left-4 cursor-pointer p-3 rounded-full border border-slate-600  backdrop-blur-lg shadow-lg flex items-center justify-center text-white hover:bg-blue-500 transition-all"
-      >
+      <motion.button
+         whileHover={{ scale: 1.1, rotateY: 10 }}
+         whileTap={{ scale: 0.95 }}
+         onClick={() => setShowModal(true)}
+         className="absolute top-4 left-4 z-[9999] cursor-pointer p-3 rounded-full 
+                    border border-slate-600 backdrop-blur-lg shadow-lg flex items-center 
+                    justify-center text-white hover:bg-blue-400 transition-all"
+>
         <i className="ri-add-line text-2xl"></i>
-      </motion.div>
+      </motion.button>
+
 
 
 
@@ -69,7 +72,7 @@ const Home = () => {
       <motion.button
         whileHover={{ rotate: 180, scale: 1.2 }}
         whileTap={{ scale: 0.9 }}
-        className="absolute top-4 right-4 text-white"
+        className="absolute top-4 right-4 text-white hover:bg-blue-400"
         onClick={() => setShowModal2(true)}
       >
         <i className="ri-logout-box-line text-3xl"></i>
